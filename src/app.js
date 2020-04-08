@@ -10,83 +10,69 @@ app.use(cors());
 
 let repositories = [];
 
-const checkId = (id, res) => {
-  if (repositories.filter(repo => repo.id === id).length <= 0) {
-    res.status(400).send({ error: `Repo ID ${id} not found` });
-    return false;
-  } return true;
-}
-
 app.get("/repositories", (req, res) => {
   res.status(200).send(repositories);
 });
 
 app.post("/repositories", (req, res) => {
   const { title, url, techs = [] } = req.body
-  if (title && url) {
-    const id = uuid();
-    const newRepo = {
-      id,
-      title,
-      url,
-      techs,
-      likes: 0,
-    };
-    repositories.push(newRepo);
-    res.status(201).send(newRepo);
-  } else {
-    res.status(400).send({ error: `Invalid title or URL` });
-  }
+
+  const repo = { id: uuid(), title, url, techs, likes: 0 }
+
+  repositories.push(repo);
+
+  return res.json(repo);
 });
 
 app.put("/repositories/:id", (req, res) => {
-  const { id } = req.params;
+  const { id }  = req.params;
   const { title, url, techs } = req.body;
-  let newRepo;
 
-  if(!checkId(id, res)) { return };
+  const repoIndex = repositories.findIndex(repo => repo.id === id);
 
-  repositories = repositories.map(repo => {
-    if (repo.id === id) {
-      newRepo = {
-        id,
-        title: title || repo.title,
-        url: url || repo.url,
-        techs: techs || repo.techs,
-        likes: repo.likes,
-      };
-      return newRepo
-    }
-    return repo;
-  });
+  if (repoIndex < 0) {
+    return res.status(400).json({ error: 'Repository not found' });
+  }
 
-  res.status(200).send(newRepo);
+  const repository = {
+    id,
+    title,
+    url,
+    techs,
+    likes: repositories[repoIndex].likes,
+  }
+
+  repositories[repoIndex] = repository;
+
+  return res.json(repository);
 });
 
 app.delete("/repositories/:id", (req, res) => {
   const { id } = req.params;
 
-  if(!checkId(id, res)) { return };
+  const repositoryIndex = repositories.findIndex(repo => repo.id === id);
 
-  repositories = repositories.filter(repo => repo.id !== id);
+  if (repositoryIndex < 0) {
+    return res.status(400).json({ error: 'Repository not found' });
+  }
 
-  res.status(204).send({ success: `Repo id ${id} has been deleted`});
+  repositories.splice(repositoryIndex, 1);
+
+  return res.status(204).send();
 });
 
 app.post("/repositories/:id/like", (req, res) => {
   const { id } = req.params;
-  let repoLikes = 0;
-  if(!checkId(id, res)) { return };
 
-  repositores = repositories.map(repo => {
-    if (repo.id === id) {
-      repo.likes += 1;
-      repoLikes = repo.likes;
-    }
-    return repo;
-  })
+  const repositoryIndex = repositories.findIndex(repo => repo.id === id);
 
-  res.status(200).send({ likes: repoLikes });
+  if (repositoryIndex < 0) {
+    return res.status(400).json({ error: 'Repository not found' });
+  }
+
+  repositories[repositoryIndex].likes += 1;
+
+  res.status(200).send({ likes: repositories[repositoryIndex].likes });
 });
 
 module.exports = app;
